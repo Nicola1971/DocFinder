@@ -20,7 +20,7 @@
  *
  * @package chunkie
  * @subpackage classfile
- * @version 1.0.3
+ * @version 1.0.3 (DocFinder build, PHP 8 compatible)
  *
  * newChunkie Class.
  *
@@ -38,7 +38,7 @@ class newChunkie
 
     /**
      * A reference to the PHx instance
-     * @var PHxParser $phx
+     * @var DocFinderPHxParser $phx
      */
     public $phx;
 
@@ -111,6 +111,13 @@ class newChunkie
     private $profile;
 
     /**
+     * Template chunks cache (was $modx->chunkieCache: a dynamic property
+     * on DocumentParser is deprecated since PHP 8.2).
+     * @var array $chunkieCache
+     */
+    private static $chunkieCache = array('@FILE' => array(), '@CHUNK' => array());
+
+    /**
      * newChunkie constructor
      *
      * @param DocumentParser $modx The DocumentParser instance.
@@ -119,14 +126,14 @@ class newChunkie
     function __construct(&$modx, $config = array())
     {
         $this->modx = & $modx;
-        
-        if(!isset($this->modx->chunkieCache)) $this->modx->chunkieCache = array();
-        
-        if (!class_exists("PHxParser")) {
+
+        // Always use the PHx parser bundled with DocFinder (own class name):
+        // a PHxParser loaded by the site may be older or not PHP 8 ready.
+        if (!class_exists("DocFinderPHxParser")) {
             include_once(strtr(realpath(dirname(__FILE__)) . "/phx.parser.class.inc.php", '\\', '/'));
         }
-        $this->phx = new PHxParser();
-        $this->options['phxcheck'] = (version_compare($this->phx->version, '2.0.0', '>=')) ? 1 : 0;
+        $this->phx = new DocFinderPHxParser();
+        $this->options['phxcheck'] = (isset($this->phx->version) && version_compare($this->phx->version, '2.0.0', '>=')) ? 1 : 0;
 
         $this->depth = 0;
         // Basepath @FILE is prefixed with
@@ -135,8 +142,8 @@ class newChunkie
 
         $this->options['parseLazy'] = (boolean)(isset($config['parseLazy']) ? $config['parseLazy'] : false);
         $this->options['profile'] = (boolean)(isset($config['profile']) ? $config['profile'] : false);
-        $this->tpl = $this->getTemplateChunk($config['tpl']);
-        $this->tplWrapper = $this->getTemplateChunk($config['tplWrapper']);
+        $this->tpl = $this->getTemplateChunk(isset($config['tpl']) ? (string)$config['tpl'] : '');
+        $this->tplWrapper = $this->getTemplateChunk(isset($config['tplWrapper']) ? (string)$config['tplWrapper'] : '');
         $this->queue = (isset($config['queue']) ? $config['queue'] : 'default');
         $this->placeholders = array();
         $this->templates = array();
@@ -281,7 +288,7 @@ class newChunkie
     public function getPlaceholders($queue = '')
     {
         $queue = !empty($queue) ? $queue : $this->queue;
-        return $this->placeholders[$queue];
+        return isset($this->placeholders[$queue]) ? $this->placeholders[$queue] : array();
     }
 
     /**
@@ -295,7 +302,7 @@ class newChunkie
     public function getPlaceholder($key, $queue = '')
     {
         $queue = !empty($queue) ? $queue : $this->queue;
-        return $this->placeholders[$queue][$key];
+        return isset($this->placeholders[$queue][$key]) ? $this->placeholders[$queue][$key] : null;
     }
 
     /**
@@ -320,7 +327,7 @@ class newChunkie
     public function getTemplates($queue = '')
     {
         $queue = !empty($queue) ? $queue : $this->queue;
-        return $this->templates[$queue];
+        return isset($this->templates[$queue]) ? $this->templates[$queue] : null;
     }
 
     /**
@@ -446,6 +453,9 @@ class newChunkie
         } else {
             $return = array(trim($prefix, '.') => str_replace('[+wrapper+]', $object->template, $object->wrapper));
         }
+        if (!isset($return)) {
+            $return = array();
+        }
         return $return;
     }
 
@@ -464,7 +474,7 @@ class newChunkie
     public function getProfile($type, $queue = '')
     {
         $queue = !empty($queue) ? $queue : $this->queue;
-        $output = $this->profile[$queue][$type];
+        $output = isset($this->profile[$queue][$type]) ? $this->profile[$queue][$type] : 0;
         $this->profile[$queue][$type] = 0;
         return $output;
     }
@@ -517,7 +527,7 @@ class newChunkie
 
                 // Process the whole template
                 $this->phx->placeholders = array();
-                $this->setPHxVariables($this->placeholders[$queue]);
+                $this->setPHxVariables(isset($this->placeholders[$queue]) ? $this->placeholders[$queue] : array());
                 $output = $this->phx->Parse($template);
 
                 // Unmask uncached elements (will be parsed outside of this)
@@ -560,18 +570,15 @@ class newChunkie
         switch (true) {
             case (substr($tpl, 0, 5) == '@FILE'):
                 $filename = trim(substr($tpl, 5), ' :');
-                if (!isset($this->modx->chunkieCache['@FILE'])) {
-                    $this->modx->chunkieCache['@FILE'] = array();
-                }
-                if (!empty($filename) && !isset($this->modx->chunkieCache[$filename])) {
+                if (!empty($filename) && !isset(self::$chunkieCache['@FILE'][$filename])) {
                     if (file_exists($this->options['basepath'] . $filename)) {
                         $template = file_get_contents($this->options['basepath'] . $filename);
                     } else {
                         $template = '';
                     }
-                    $this->modx->chunkieCache['@FILE'][$filename] = $template;
+                    self::$chunkieCache['@FILE'][$filename] = $template;
                 } else {
-                    $template = !empty($filename) ? $this->modx->chunkieCache['@FILE'][$filename] : '';
+                    $template = !empty($filename) ? self::$chunkieCache['@FILE'][$filename] : '';
                 }
                 break;
             case (substr($tpl, 0, 5) == '@CODE'):
@@ -583,15 +590,12 @@ class newChunkie
                 } else {
                     $chunkname = $tpl;
                 }
-                if (!isset($this->modx->chunkieCache['@CHUNK'])) {
-                    $this->modx->chunkieCache['@CHUNK'] = array();
-                }
-                if (!empty($chunkname) && !isset($this->modx->chunkieCache['@CHUNK'][$chunkname])) {
+                if (!empty($chunkname) && !isset(self::$chunkieCache['@CHUNK'][$chunkname])) {
                     $chunk = $this->modx->getChunk($chunkname);
                     $template = ($chunk) ? $chunk : $chunkname;
-                    $this->modx->chunkieCache['@CHUNK'][$chunkname] = $template;
+                    self::$chunkieCache['@CHUNK'][$chunkname] = $template;
                 } else {
-                    $template = (!empty($chunkname)) ? $this->modx->chunkieCache['@CHUNK'][$chunkname] : '';
+                    $template = (!empty($chunkname)) ? self::$chunkieCache['@CHUNK'][$chunkname] : '';
                 }
                 break;
         }

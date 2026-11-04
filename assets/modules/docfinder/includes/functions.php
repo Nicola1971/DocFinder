@@ -7,7 +7,7 @@
 //         Ajax powered search and replace for the manager.
 //
 //   Version:
-//         1.6.1
+//         1.8 (PHP 8)
 //
 //   Created by:
 // 	    Bogdan Günther (http://www.medianotions.de - bg@medianotions.de)
@@ -46,6 +46,7 @@ function printResultTabs($search, $searchOptions, $searchPlacesArray)
         </script>';
 
     $resultsTotal = 0;
+    $results = array();
 
     // loop through tabs
     foreach ($searchPlacesArray as $tab) {
@@ -53,7 +54,7 @@ function printResultTabs($search, $searchOptions, $searchPlacesArray)
         $name = $tab['name'];
 
         // skip non active search places
-        if ($searchOptions['search_place_' . $id] != 'checked="checked"') continue;
+        if (!isset($searchOptions['search_place_' . $id]) || $searchOptions['search_place_' . $id] != 'checked="checked"') continue;
 
         // get results
         $results[$id] = printResultTables($id, $search, $searchOptions, false, $searchPlacesArray);
@@ -110,14 +111,13 @@ function printResultTabs($search, $searchOptions, $searchPlacesArray)
 
     // adapt results headline if there was a string replace
     if ($searchOptions['replace_mode']) {
-        $output .= '// refresh results head info
+        $output .= '
             <script type="text/javascript">
-                $("replace_string").setText("' . $searchOptions['replace'] . '");
-                $("replace_info").setStyles("display: inline;");
-                if ($counter > 0) {
-                    // refresh doc tree in the left frame
-                    if (parent.tree) parent.tree.location.reload();
-                }
+                // refresh results head info
+                $("replace_string").setText("' . addslashes(htmlspecialchars($searchOptions['replace'], ENT_QUOTES, 'UTF-8')) . '");
+                $("replace_info").setStyles("display: inline;");' . ($resultsTotal > 0 ? '
+                // refresh doc tree in the left frame
+                if (parent.tree && parent.tree.location) parent.tree.location.reload();' : '') . '
             </script>';
     } else {
         $output .= '
@@ -135,11 +135,11 @@ function printResultTables($area, $search, $searchOptions, $results, $searchPlac
     global $modx;
 
     // set sortable class if sortable tables are enabled
-    if ($searchOptions['sortable_tables']) {
-        $sortableClass = "sortable";
-    };
+    $sortableClass = !empty($searchOptions['sortable_tables']) ? "sortable" : "";
 
     $output = '';
+    $counter = 0;
+    $searchResultsArray = array();
     switch ($area) {
         // print Documents and TV values results table
         case "DocAndTVV":
@@ -206,7 +206,7 @@ function printResultTables($area, $search, $searchOptions, $results, $searchPlac
                         <td class="id align_right">' . $searchResults['id'] . '</td>
                         <td class="pagetitle' . $pagetitle_class . '">
                             <strong><a href="' . $urlEdit . '" title="[+lang.edit+]">' . $searchResults['pagetitle'] . '</a></strong>
-                            <small>' . printDocumentBranch($searchResults['parentsArray']) . '</small>
+                            <small>' . printDocumentBranch(isset($searchResults['parentsArray']) ? $searchResults['parentsArray'] : array()) . '</small>
                         </td>
                         <td class="longtitle">' . $searchResults['longtitle'] . '</td>
                         <td class="createdon">' . $modx->toDateFormat($searchResults['createdon']) . '</td>
@@ -288,7 +288,7 @@ function printResultTables($area, $search, $searchOptions, $results, $searchPlac
                     $urlEdit = "index.php?a=" . $searchPlacesArray[$area]['edit'] . "&amp;id=" . $searchResults['id'];
 
                     // take care of different name IDs
-                    if ($searchResults['templatename']) {
+                    if (!empty($searchResults['templatename'])) {
                         $searchResults['name'] = $searchResults['templatename'];
                     }
 
@@ -363,7 +363,7 @@ function printResultTables($area, $search, $searchOptions, $results, $searchPlac
             $counter = 0;
             foreach ($searchPlacesArray as $section) {
                 // ger search results
-                $searchResultsArray = $results[$section['id']]['array'];
+                $searchResultsArray = (is_array($results) && isset($results[$section['id']]['array'])) ? $results[$section['id']]['array'] : array();
 
                 if ($searchResultsArray) {
                     foreach ($searchResultsArray as $searchResults) {
@@ -384,20 +384,18 @@ function printResultTables($area, $search, $searchOptions, $results, $searchPlac
                             $urlEdit = "index.php?a=" . $searchPlacesArray[$section['id']]['edit'] . "&amp;id=" . $searchResults['id'];
 
                             // set values
-                            if ($searchResults['templatename']) $searchResults['name'] = $searchResults['templatename'];
-                            $name = $searchResults['name'];
-                            $description = $searchResults['description'];
-                            if ($searchResults['createdon']) $createdon = $modx->toDateFormat($searchResults['createdon']);
+                            if (!empty($searchResults['templatename'])) $searchResults['name'] = $searchResults['templatename'];
+                            $name = isset($searchResults['name']) ? $searchResults['name'] : '';
+                            $description = isset($searchResults['description']) ? $searchResults['description'] : '';
+                            if (!empty($searchResults['createdon'])) $createdon = $modx->toDateFormat($searchResults['createdon']);
                             else $createdon = "&ndash;";
-                            if ($searchResults['editedon']) $editedon = $modx->toDateFormat($searchResults['editedon']);
+                            if (!empty($searchResults['editedon'])) $editedon = $modx->toDateFormat($searchResults['editedon']);
                             else $editedon = "&ndash;";
                         }
 
                         // set common values
                         $type = substr($section['name'], 0, strlen($section['name']));
 
-                        // take care of different name IDs
-                        if ($searchResults['templatename']) $searchResults['name'] = $searchResults['templatename'];
 
                         // output result
 
@@ -447,21 +445,23 @@ function printResultTables($area, $search, $searchOptions, $results, $searchPlac
             break;
     }
 
-    // save search hits
-    $results['hits'] = $counter;
-
-    // save HTML output
-    $results['html'] = $output;
-
-    // save results arrays
-    $results['array'] = $searchResultsArray;
-
-    return $results;
+    // $results is false for the single tabs: build a new array
+    // (automatic conversion of false to array is deprecated since PHP 8.1)
+    return array(
+        'hits' => $counter,
+        'html' => $output,
+        'array' => $searchResultsArray
+    );
 }
 
 function getDocAndTVVResults($search, $searchOptions)
 {
     global $modx;
+
+    $searchResultsArray = array();
+    $sqlWhere = '';
+    $searchField = '';
+    $parentsFilter = isset($search['parentsArray']) ? $search['parentsArray'] : array();
 
     // set SQL data selection
     $sqlSelection = "id, pagetitle, longtitle, published, hidemenu, description, alias, introtext, menutitle, content, createdon, editedon";
@@ -473,14 +473,14 @@ function getDocAndTVVResults($search, $searchOptions)
     $dbTable = $modx->getFullTableName("site_content");
     foreach ($searchFieldArray as $searchField) {
         // Filter: Check where to search in and where to skip
-        if (!$searchOptions['id'] and $searchField == "id") continue;
-        if (!$searchOptions['pagetitle'] and $searchField == "pagetitle") continue;
-        if (!$searchOptions['longtitle'] and $searchField == "longtitle") continue;
-        if (!$searchOptions['description'] and $searchField == "description") continue;
-        if (!$searchOptions['alias'] and $searchField == "alias") continue;
-        if (!$searchOptions['introtext'] and $searchField == "introtext") continue;
-        if (!$searchOptions['menutitle'] and $searchField == "menutitle") continue;
-        if (!$searchOptions['content'] and $searchField == "content") continue;
+        if (empty($searchOptions['id']) and $searchField == "id") continue;
+        if (empty($searchOptions['pagetitle']) and $searchField == "pagetitle") continue;
+        if (empty($searchOptions['longtitle']) and $searchField == "longtitle") continue;
+        if (empty($searchOptions['description']) and $searchField == "description") continue;
+        if (empty($searchOptions['alias']) and $searchField == "alias") continue;
+        if (empty($searchOptions['introtext']) and $searchField == "introtext") continue;
+        if (empty($searchOptions['menutitle']) and $searchField == "menutitle") continue;
+        if (empty($searchOptions['content']) and $searchField == "content") continue;
 
         // Filter: createdon and editedon are not searched directly
         if ($searchField == "createdon" or $searchField == "editedon") continue;
@@ -498,7 +498,7 @@ function getDocAndTVVResults($search, $searchOptions)
         $result = $modx->db->query($sql);
 
         // get rows
-        while ($row = $modx->fetchRow($result)) {
+        while ($row = $modx->db->getRow($result)) {
             // check created date range
             if ($row['createdon'] < $searchOptions['createdon_start_time'] or $row['createdon'] > $searchOptions['createdon_end_time']) continue;
 
@@ -509,8 +509,9 @@ function getDocAndTVVResults($search, $searchOptions)
 
             // checkParents
             $parents = getAllParents($id);
-            if (checkparents($search['parentsArray'], $parents)) {
+            if (checkparents($parentsFilter, $parents)) {
                 // save results in our results array
+                if (!isset($searchResultsArray[$id]['found_in'])) $searchResultsArray[$id]['found_in'] = '';
                 $searchResultsArray[$id]['id'] = $id;
                 $searchResultsArray[$id]['pagetitle'] = $row['pagetitle'];
                 $searchResultsArray[$id]['longtitle'] = $row['longtitle'];
@@ -522,16 +523,15 @@ function getDocAndTVVResults($search, $searchOptions)
                 $searchResultsArray[$id]['parentsArray'] = $parents;
 
                 // replace
-                if ($searchOptions['replace_mode'] and $searchField != "id") replace($search['string'], $searchOptions['replace'], $id, $searchField, $row[$searchField], $dbTable);
+                if ($searchOptions['replace_mode'] and $searchField != "id") replace($search['string'], $searchOptions['replace'], $id, $searchField, $row[$searchField], $dbTable, $searchOptions);
             }
         }
 
-        // jump to next search array key
-        next($search);
     }
 
     // search in TVs if required
-    if ($searchOptions['tvs'] and $search['string'] != "ALL") {
+    if (!empty($searchOptions['tvs']) and $search['string'] != "ALL") {
+        $TV_Names = array();
         $tableTV_Names = $modx->getFullTableName("site_tmplvars");
         $tableTV_Content = $modx->getFullTableName("site_tmplvar_contentvalues");
 
@@ -547,7 +547,7 @@ function getDocAndTVVResults($search, $searchOptions)
         $resultTVContent = $modx->db->query($sqlTVContent);
 
         // get rows TV names
-        while ($row = $modx->fetchRow($resultTVNames)) {
+        while ($row = $modx->db->getRow($resultTVNames)) {
             $id = $row['id'];
             $name = $row['name'];
 
@@ -556,15 +556,17 @@ function getDocAndTVVResults($search, $searchOptions)
         }
 
         // get rows TV content
-        while ($row = $modx->fetchRow($resultTVContent)) {
+        while ($row = $modx->db->getRow($resultTVContent)) {
             $id = $row['contentid'];
 
             // checkParents
             $parents = getAllParents($id);
-            if (checkparents($search['parentsArray'], $parents)) {
+            if (checkparents($parentsFilter, $parents)) {
                 $TV_varID = $row['tmplvarid'];
                 $TV_ID = $row['id'];
-                $document = $modx->getDocument($id);
+                // getDocument() skips unpublished/deleted documents (returns false)
+                $document = dfGetDocument($id);
+                if (!$document) continue;
 
                 // check created date range
                 if ($document['createdon'] < $searchOptions['createdon_start_time'] or $document['createdon'] > $searchOptions['createdon_end_time']) continue;
@@ -573,6 +575,8 @@ function getDocAndTVVResults($search, $searchOptions)
                 if ($document['editedon'] < $searchOptions['editedon_start_time'] or $document['editedon'] > $searchOptions['editedon_end_time']) continue;
 
                 // save results in our results array
+                if (!isset($searchResultsArray[$id]['found_in'])) $searchResultsArray[$id]['found_in'] = '';
+                if (!isset($searchResultsArray[$id]['parentsArray'])) $searchResultsArray[$id]['parentsArray'] = $parents;
                 $searchResultsArray[$id]['id'] = $id;
                 $searchResultsArray[$id]['pagetitle'] = $document['pagetitle'];
                 $searchResultsArray[$id]['longtitle'] = $document['longtitle'];
@@ -580,10 +584,10 @@ function getDocAndTVVResults($search, $searchOptions)
                 $searchResultsArray[$id]['hidemenu'] = $document['hidemenu'];
                 $searchResultsArray[$id]['createdon'] = $document['createdon'];
                 $searchResultsArray[$id]['editedon'] = $document['editedon'];
-                $searchResultsArray[$id]['found_in'] .= ", tv_" . $TV_Names[$TV_varID]['name'];
+                $searchResultsArray[$id]['found_in'] .= ", tv_" . (isset($TV_Names[$TV_varID]['name']) ? $TV_Names[$TV_varID]['name'] : $TV_varID);
 
                 // replace
-                if ($searchOptions['replace_mode'] and $searchField != "id") replace($search['string'], $searchOptions['replace'], $TV_ID, 'value', $row['value'], $tableTV_Content);
+                if ($searchOptions['replace_mode']) replace($search['string'], $searchOptions['replace'], $TV_ID, 'value', $row['value'], $tableTV_Content, $searchOptions);
             }
         }
     }
@@ -594,6 +598,9 @@ function getDocAndTVVResults($search, $searchOptions)
 function getResourcesResults($area, $search, $searchOptions)
 {
     global $modx;
+
+    $searchResultsArray = array();
+    $sqlWhere = '';
 
     // determine DB tables
     $dbShortTableArray['Templates'] = "site_templates";
@@ -620,10 +627,10 @@ function getResourcesResults($area, $search, $searchOptions)
     $dbTable = $modx->getFullTableName($dbShortTable);
     foreach ($searchFieldArray as $searchField) {
         // Filter: Check where to search in and where to skip
-        if (!$searchOptions['resources_id'] and $searchField == "id") continue;
-        if (!$searchOptions['resources_name'] and ($searchField == "name" or $searchField == "templatename")) continue;
-        if (!$searchOptions['resources_description'] and $searchField == "description") continue;
-        if (!$searchOptions['resources_other'] and $searchField != "id" and $searchField != "name" and $searchField != "templatename" and $searchField != "description") continue;
+        if (empty($searchOptions['resources_id']) and $searchField == "id") continue;
+        if (empty($searchOptions['resources_name']) and ($searchField == "name" or $searchField == "templatename")) continue;
+        if (empty($searchOptions['resources_description']) and $searchField == "description") continue;
+        if (empty($searchOptions['resources_other']) and $searchField != "id" and $searchField != "name" and $searchField != "templatename" and $searchField != "description") continue;
 
         // get SQL WHERE else continue
         if ($search['string'] != "ALL") {
@@ -638,38 +645,44 @@ function getResourcesResults($area, $search, $searchOptions)
         $result = $modx->db->query($sql);
 
         // get rows
-        while ($row = $modx->fetchRow($result)) {
+        while ($row = $modx->db->getRow($result)) {
             $id = $row['id'];
 
             // save results in our results array
+            if (!isset($searchResultsArray[$id]['found_in'])) $searchResultsArray[$id]['found_in'] = '';
             foreach ($searchFieldArray as $searchFieldStore) {
-                $searchResultsArray[$id][$searchFieldStore] = $row[$searchFieldStore];
+                $searchResultsArray[$id][$searchFieldStore] = isset($row[$searchFieldStore]) ? $row[$searchFieldStore] : '';
             }
             $searchResultsArray[$id]['found_in'] .= ", " . ucfirst($searchField);
 
             // replace
-            if ($searchOptions['replace_mode'] and $searchField != "id") replace($search['string'], $searchOptions['replace'], $id, $searchField, $row[$searchField], $dbTable);
+            if ($searchOptions['replace_mode'] and $searchField != "id") replace($search['string'], $searchOptions['replace'], $id, $searchField, $row[$searchField], $dbTable, $searchOptions);
 
-            // jump to next row array key
-            next($row);
         }
     }
 
     return $searchResultsArray;
 }
 
-function replace($searchString, $replaceString, $id, $searchFieldName, $searchFieldString, $table)
+function replace($searchString, $replaceString, $id, $searchFieldName, $searchFieldString, $table, $searchOptions = null)
 {
-    global $modx, $searchOptions;
+    global $modx;
+
+    // the module runs inside a function in Evo (evalModule): the old
+    // "global $searchOptions" was always empty, so the replace was always
+    // case-insensitive. The options are now passed explicitly.
+    if (!is_array($searchOptions)) {
+        $searchOptions = isset($GLOBALS['searchOptions']) && is_array($GLOBALS['searchOptions']) ? $GLOBALS['searchOptions'] : array();
+    }
 
     // take care of case _in_sensitive searches and do the PHP string replace
-    if ($searchOptions['case_sensitive']) $searchFieldStringReplaced = str_replace($searchString, $replaceString, $searchFieldString);
+    if (!empty($searchOptions['case_sensitive'])) $searchFieldStringReplaced = str_replace($searchString, $replaceString, $searchFieldString);
     else $searchFieldStringReplaced = str_ireplace($searchString, $replaceString, $searchFieldString);
 
-    $searchFieldStringReplaced = $modx->db->escape($searchFieldStringReplaced);
+    $searchFieldStringReplaced = $modx->db->escape((string)$searchFieldStringReplaced);
 
     // update Database
-    $replaceResult = $modx->db->update($searchFieldName . ' = "' . $searchFieldStringReplaced . '"', $table, 'id = "' . $id . '"');
+    $replaceResult = $modx->db->update($searchFieldName . ' = "' . $searchFieldStringReplaced . '"', $table, 'id = "' . (int)$id . '"');
 
     return $replaceResult;
 }
@@ -686,10 +699,10 @@ function getSqlWhere($searchString, $searchField, $searchOptions)
     else if ($searchField == 'id') return false;
 
     // take care of regular expressions
-    if ($searchOptions['regular_expression']) return 'WHERE ' . $searchField . ' REGEXP "' . $sqlWhere . '"';
+    if (!empty($searchOptions['regular_expression'])) return 'WHERE ' . $searchField . ' REGEXP "' . $sqlWhere . '"';
 
     // take care of case sensitive search
-    if ($searchOptions['case_sensitive']) $caseSensitiveSQL = "BINARY";
+    if (!empty($searchOptions['case_sensitive'])) $caseSensitiveSQL = "BINARY";
     else $caseSensitiveSQL = "";
 
     // take care of AND NOT
@@ -718,9 +731,10 @@ function getSqlWhere($searchString, $searchField, $searchOptions)
     $sqlWhere = str_replace(' NOT ', '%" AND NOT $searchField LIKE "%', $sqlWhere);
 
     // take care of the results limit
-    if ($searchOptions['entries_50']) {
+    $limit = '';
+    if (!empty($searchOptions['entries_50'])) {
         $limit = ' LIMIT 50';
-    } else if ($searchOptions['entries_100']) {
+    } else if (!empty($searchOptions['entries_100'])) {
         $limit = ' LIMIT 100';
     }
     $sqlWhere .= $limit;
@@ -745,7 +759,7 @@ function getAllParents($id)
     global $modx;
 
     // go up document tree
-    $counter = 1;
+    $parents = array();
     while ($document = $modx->getParent($id)) {
         $id = $document['id'];
         $parents[$id] = $id;
@@ -770,11 +784,12 @@ function printDocumentBranch($parentsArray)
         $parentsArray = array_reverse($parentsArray);
 
         foreach ($parentsArray as $id) {
-            $document = $modx->getDocument($id);
             $urlEdit = "index.php?a=27&amp;id=" . $id;
 
             // print parents
             if ($id > 0) {
+                $document = dfGetDocument($id);
+                if (!$document) continue;
                 $output .= '
                 &gt; <a href="' . $urlEdit . '" title="[+lang.edit+]">' . $document['pagetitle'] . ' (' . $id . ')</a>';
             }
@@ -782,6 +797,21 @@ function printDocumentBranch($parentsArray)
     }
 
     return $output;
+}
+
+// Read a document also when unpublished or deleted ($modx->getDocument()
+// returns false for those): DocFinder searches the whole site_content table.
+function dfGetDocument($id)
+{
+    global $modx;
+    static $cache = array();
+    $id = (int)$id;
+    if (!array_key_exists($id, $cache)) {
+        $rs = $modx->db->select('id, pagetitle, longtitle, published, hidemenu, createdon, editedon', $modx->getFullTableName('site_content'), 'id=' . $id);
+        $row = $modx->db->getRow($rs);
+        $cache[$id] = is_array($row) ? $row : false;
+    }
+    return $cache[$id];
 }
 
 function printHistory($type)
@@ -810,7 +840,7 @@ function printHistory($type)
         $output[] = '<option value="">[+lang.' . $type . '_history_filled+]</option>';
 
         foreach ($historyArray as $entry) {
-            $entry = htmlentities($entry, false, "UTF-8");
+            $entry = htmlspecialchars($entry, ENT_QUOTES, "UTF-8");
             if ($entry == "") {
                 continue;
             };
@@ -825,4 +855,4 @@ function printHistory($type)
     return implode("\n", $output);
 }
 
-?>
+?>

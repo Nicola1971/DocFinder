@@ -3,26 +3,39 @@
 /* ####
   #
   #	Name: PHx (Placeholders Xtended)
-  #	Version: 2.1.3
+  #	Version: 2.1.3 (DocFinder build, PHP 8 compatible)
   #	Modified by Nick to include external files
+  #	Renamed to DocFinderPHxParser so that it never collides with another
+  #	PHxParser class loaded by the site (old PHx plugin, other extras).
   #	Author: Armand "bS" Pondman (apondman@zerobarrier.nl)
   #	Date: July 13, 2007
   #
   #### */
 
-class PHxParser
+class DocFinderPHxParser
 {
 
-    var $placeholders = array();
+    public $placeholders = array();
+    public $name = 'PHx';
+    public $version = '2.1.3';
+    public $user = array();
+    public $cache = array();
+    public $safetags = array();
+    public $console = array();
+    public $debug = 0;
+    public $debugLog = false;
+    public $curPass = 0;
+    public $maxPasses = 50;
+    public $swapSnippetCache = array();
 
-    function PHxParser($debug = 0, $maxpass = 50)
+    public function __construct($debug = 0, $maxpass = 50)
     {
         global $modx;
 
         $this->name = "PHx";
         $this->version = "2.1.3";
-        $this->user["mgrid"] = intval($_SESSION['mgrInternalKey']);
-        $this->user["usrid"] = intval($_SESSION['webInternalKey']);
+        $this->user["mgrid"] = isset($_SESSION['mgrInternalKey']) ? intval($_SESSION['mgrInternalKey']) : 0;
+        $this->user["usrid"] = isset($_SESSION['webInternalKey']) ? intval($_SESSION['webInternalKey']) : 0;
         $this->user["id"] = ($this->user["usrid"] > 0) ? (-$this->user["usrid"]) : $this->user["mgrid"];
         $this->cache["cm"] = array();
         $this->cache["ui"] = array();
@@ -250,7 +263,7 @@ class PHxParser
                     case "mo":
                         if ($output == "&_PHX_INTERNAL_&")
                             $output = $this->user["id"];
-                        $grps = (strlen($modifier_value) > 0) ? explode(",", $modifier_value[$i]) : array();
+                        $grps = (strlen($modifier_value[$i]) > 0) ? explode(",", $modifier_value[$i]) : array();
                         $condition[] = intval($this->isMemberOfWebGroupByUserId($output, $grps));
                         break;
                     case "or":
@@ -261,13 +274,13 @@ class PHxParser
                         break;
                     case "show":
                         $conditional = implode(' ', $condition);
-                        $isvalid = intval(eval("return (" . $conditional . ");"));
+                        $isvalid = ($conditional !== '') ? intval(eval("return (" . $conditional . ");")) : 0;
                         if (!$isvalid) {
                             $output = NULL;
                         }
                     case "then":
                         $conditional = implode(' ', $condition);
-                        $isvalid = intval(eval("return (" . $conditional . ");"));
+                        $isvalid = ($conditional !== '') ? intval(eval("return (" . $conditional . ");")) : 0;
                         if ($isvalid) {
                             $output = $modifier_value[$i];
                         } else {
@@ -276,7 +289,7 @@ class PHxParser
                         break;
                     case "else":
                         $conditional = implode(' ', $condition);
-                        $isvalid = intval(eval("return (" . $conditional . ");"));
+                        $isvalid = ($conditional !== '') ? intval(eval("return (" . $conditional . ");")) : 0;
                         if (!$isvalid) {
                             $output = $modifier_value[$i];
                         }
@@ -285,10 +298,10 @@ class PHxParser
                         $raw = explode("&", $modifier_value[$i]);
                         $map = array();
                         for ($m = 0; $m < (count($raw)); $m++) {
-                            $mi = explode("=", $raw[$m]);
-                            $map[$mi[0]] = $mi[1];
+                            $mi = explode("=", $raw[$m], 2);
+                            $map[$mi[0]] = isset($mi[1]) ? $mi[1] : '';
                         }
-                        $output = $map[$output];
+                        $output = isset($map[$output]) ? $map[$output] : '';
                         break;
 
                     #####  String Modifiers
@@ -323,7 +336,9 @@ class PHxParser
                         break;
                     case "wordwrap": // default: 70
                         $wrapat = intval($modifier_value[$i]) ? intval($modifier_value[$i]) : 70;
-                        $output = preg_replace("~(\b\w+\b)~e", "wordwrap('\\1',\$wrapat,' ',1)", $output);
+                        $output = preg_replace_callback("~(\b\w+\b)~", function ($m) use ($wrapat) {
+                            return wordwrap($m[1], $wrapat, ' ', 1);
+                        }, $output);
                         break;
                     case "limit": // default: 100
                         $limit = intval($modifier_value[$i]) ? intval($modifier_value[$i]) : 100;
@@ -344,7 +359,7 @@ class PHxParser
                         $output = nl2br($output);
                         break;
                     case "date":
-                        $output = strftime($modifier_value[$i], 0 + $output);
+                        $output = $this->formatDate($modifier_value[$i], (int)$output);
                         break;
                     case "set":
                         $c = $i + 1;
@@ -368,18 +383,20 @@ class PHxParser
                     case "inrole": // deprecated
                         if ($output == "&_PHX_INTERNAL_&")
                             $output = $this->user["id"];
-                        $grps = (strlen($modifier_value) > 0) ? explode(",", $modifier_value[$i]) : array();
+                        $grps = (strlen($modifier_value[$i]) > 0) ? explode(",", $modifier_value[$i]) : array();
                         $output = intval($this->isMemberOfWebGroupByUserId($output, $grps));
                         break;
                     default:
+                        $cm = '';
                         if (!array_key_exists($modifier_cmd[$i], $this->cache["cm"])) {
-                            $sql = "SELECT snippet FROM " . $modx->getFullTableName("site_snippets") . " WHERE " . $modx->getFullTableName("site_snippets") . ".name='phx:" . $modifier_cmd[$i] . "';";
-                            $result = $modx->dbQuery($sql);
-                            if ($modx->recordCount($result) == 1) {
-                                $row = $modx->fetchRow($result);
+                            $sql = "SELECT snippet FROM " . $modx->getFullTableName("site_snippets") . " WHERE name='phx:" . $modx->db->escape($modifier_cmd[$i]) . "';";
+                            $result = $modx->db->query($sql);
+                            $count_cm = $modx->db->getRecordCount($result);
+                            if ($count_cm == 1) {
+                                $row = $modx->db->getRow($result);
                                 $cm = $this->cache["cm"][$modifier_cmd[$i]] = $row["snippet"];
                                 $this->Log("  |--- DB -> Custom Modifier");
-                            } else if ($modx->recordCount($result) == 0) { // If snippet not found, look in the modifiers folder
+                            } else if ($count_cm == 0 && preg_match('/^[a-zA-Z0-9_\-]+$/', $modifier_cmd[$i])) { // If snippet not found, look in the modifiers folder
                                 $filename = MODX_BASE_PATH . 'assets/plugins/phx/modifiers/' . $modifier_cmd[$i] . '.phx.php';
                                 if (@file_exists($filename)) {
                                     $file_contents = @file_get_contents($filename);
@@ -435,7 +452,7 @@ class PHxParser
     {
         if ($this->debug) {
             $this->debugLog = true;
-            $this->console[] = (count($this->console) + 1 - $this->curPass) . " [" . strftime("%H:%M:%S", time()) . "] " . $this->LogClean($string);
+            $this->console[] = (count($this->console) + 1 - $this->curPass) . " [" . date("H:i:s") . "] " . $this->LogClean($string);
         }
     }
 
@@ -444,7 +461,7 @@ class PHxParser
     {
         if ($this->debug) {
             $this->debugLog = true;
-            $this->console[] = (count($this->console) + 1 - $this->curPass) . " [" . strftime("%H:%M:%S", time()) . "] " . "  |--- Returns: <div style='margin: 10px;'>" . $this->LogClean($string) . "</div>";
+            $this->console[] = (count($this->console) + 1 - $this->curPass) . " [" . date("H:i:s") . "] " . "  |--- Returns: <div style='margin: 10px;'>" . $this->LogClean($string) . "</div>";
         }
     }
 
@@ -475,7 +492,7 @@ class PHxParser
         } else {
             $user = $this->cache["ui"][$userid];
         }
-        return $user[$field];
+        return (is_array($user) && isset($user[$field])) ? $user[$field] : '';
     }
 
     // Returns true if the user id is in one the specified webgroups
@@ -497,7 +514,9 @@ class PHxParser
             $tbl = $modx->getFullTableName("webgroup_names");
             $tbl2 = $modx->getFullTableName("web_groups");
             $sql = "SELECT wgn.name FROM $tbl wgn INNER JOIN $tbl2 wg ON wg.webgroup=wgn.id AND wg.webuser='" . $userid . "'";
-            $this->cache["mo"][$userid] = $grpNames = $modx->db->getColumn("name", $sql);
+            $grpNames = $modx->db->getColumn("name", $sql);
+            if (!is_array($grpNames)) $grpNames = array();
+            $this->cache["mo"][$userid] = $grpNames;
         } else {
             $grpNames = $this->cache["mo"][$userid];
         }
@@ -508,6 +527,37 @@ class PHxParser
 
         // If we get here the above logic did not find a match, so return false
         return false;
+    }
+
+    // strftime() is deprecated since PHP 8.1: use it only where it still exists
+    // without deprecation, otherwise translate the common tokens to date().
+    function formatDate($format, $timestamp)
+    {
+        if (PHP_VERSION_ID < 80100 && function_exists('strftime')) {
+            return strftime($format, $timestamp);
+        }
+        $map = array(
+            '%a' => 'D', '%A' => 'l', '%d' => 'd', '%e' => 'j', '%j' => 'z', '%u' => 'N', '%w' => 'w',
+            '%U' => 'W', '%V' => 'W', '%W' => 'W', '%b' => 'M', '%B' => 'F', '%h' => 'M', '%m' => 'm',
+            '%y' => 'y', '%Y' => 'Y', '%G' => 'o', '%H' => 'H', '%k' => 'G', '%I' => 'h', '%l' => 'g',
+            '%M' => 'i', '%p' => 'A', '%P' => 'a', '%r' => 'h:i:s A', '%R' => 'H:i', '%S' => 's',
+            '%T' => 'H:i:s', '%D' => 'm/d/y', '%F' => 'Y-m-d', '%s' => 'U', '%n' => "\n", '%t' => "\t", '%%' => '%'
+        );
+        // escape date() letters that are not part of a % token
+        $out = '';
+        $len = strlen($format);
+        for ($c = 0; $c < $len; $c++) {
+            $tok = substr($format, $c, 2);
+            if ($format[$c] == '%' && isset($map[$tok])) {
+                $out .= $map[$tok];
+                $c++;
+            } elseif (ctype_alpha($format[$c]) || $format[$c] == '\\') {
+                $out .= '\\' . $format[$c];
+            } else {
+                $out .= $format[$c];
+            }
+        }
+        return date($out, $timestamp);
     }
 
     // Returns the value of a PHx/MODx placeholder.

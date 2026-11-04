@@ -7,7 +7,7 @@
 //         Ajax powered search and replace for the manager.
 //
 //   Version:
-//         1.7
+//         1.8 (PHP 8)
 //
 //   Created by:
 // 	    Bogdan Günther (http://www.medianotions.de - bg@medianotions.de)
@@ -21,7 +21,7 @@
 //
 //
 
-if (IN_MANAGER_MODE != 'true') {
+if (!defined('IN_MANAGER_MODE') || IN_MANAGER_MODE != 'true') {
     die('<h1>ERROR:</h1><p>Please use the MODx Content Manager instead of accessing this file directly.</p>');
 }
 
@@ -37,24 +37,22 @@ if (!class_exists('newChunkie')) {
 
 $_lang = array();
 include(DF_BASE_PATH . 'lang/english.php');
-if (file_exists(DF_BASE_PATH . 'lang/' . $modx->config['manager_language'] . '.php')) {
-    include(DF_BASE_PATH . 'lang/' . $modx->config['manager_language'] . '.php');
+$df_manager_language = isset($modx->config['manager_language']) ? preg_replace('/[^a-zA-Z0-9_\-]/', '', $modx->config['manager_language']) : '';
+if ($df_manager_language != '' && file_exists(DF_BASE_PATH . 'lang/' . $df_manager_language . '.php')) {
+    include(DF_BASE_PATH . 'lang/' . $df_manager_language . '.php');
 }
 
 //error_reporting(E_ALL);
 
-// set PHP version
-$phpversion = intval(substr(phpversion(), 0, 1));
-
-// set timezoneZeitzone festlegen
-if ($phpversion > 4) date_default_timezone_set("Europe/Berlin");
+// (the hardcoded date_default_timezone_set("Europe/Berlin") has been removed:
+// the module now uses the same timezone as the rest of the manager)
 
 $options = array();
 $options['moduleversion'] = '1.7';
-$options['theme'] = $modx->config['manager_theme'];
-$options['modx_charset'] = $modx->config['modx_charset'];
-$options['dir'] = ($modx->config['manager_direction'] == 'rtl' ? 'rtl' : 'ltr');
-$options['module_id'] = (int)$_GET['id'];
+$options['theme'] = isset($modx->config['manager_theme']) ? $modx->config['manager_theme'] : '';
+$options['modx_charset'] = isset($modx->config['modx_charset']) ? $modx->config['modx_charset'] : 'UTF-8';
+$options['dir'] = (isset($modx->config['manager_direction']) && $modx->config['manager_direction'] == 'rtl' ? 'rtl' : 'ltr');
+$options['module_id'] = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $options['module_url'] = DF_PATH;
 
 
@@ -64,7 +62,7 @@ if (isset($modx->config['manager_direction'])) $dir = ($modx->config['manager_di
 else $dir = "";
 
 // load lang as seen in Doc Manager
-$lang = $modx->config['manager_language'];
+$lang = $df_manager_language;
 
 // define search places
 $searchPlacesArray = array(
@@ -112,6 +110,9 @@ include(DF_BASE_PATH . 'includes/functions.php');
 // get and set post and session vars: form controls
 if (isset($_POST['checkform'])) $checkform = $_POST['checkform']; else $checkform = "load";
 if (isset($_POST['update_session'])) $update_session = $_POST['update_session']; else $update_session = 0;
+
+$search = array('string' => '', 'parents' => '', 'parentsArray' => array());
+$searchOptions = array();
 
 // get and set post and session vars: search places
 if (isset($_POST['search_place_selector']) or !empty($_SESSION['docfinder_search_place_selector']) and !$update_session) $searchOptions['search_place_selector'] = 'checked="checked"'; else $searchOptions['search_place_selector'] = "";
@@ -184,10 +185,11 @@ else $searchOptions['replace_mode'] = false;
 if (isset($_POST['parents'])) $search['parents'] = $_POST['parents']; else if (!empty($_SESSION['docfinder_parents']) and !$update_session) $search['parents'] = $_SESSION['docfinder_parents']; else $search['parents'] = "";
 
 // set parents array
-$parentsArray = explode(",", $search['parents']);
+$parentsArray = explode(",", (string)$search['parents']);
 foreach ($parentsArray as $parent) {
     $parent = trim($parent);
-    if ($parent == "") continue;
+    if ($parent == "" || !is_numeric($parent)) continue;
+    $parent = (int)$parent;
     $search['parentsArray'][$parent] = $parent;
 }
 
@@ -265,6 +267,7 @@ $_SESSION['docfinder_entries_100'] = $searchOptions['entries_100'];
 $_SESSION['docfinder_entries_All'] = $searchOptions['entries_All'];
 
 $_SESSION['docfinder_string'] = $search['string'];
+if (!isset($_style) || !is_array($_style)) $_style = array();
 $_SESSION['docfinder_parents'] = $search['parents'];
 
 // session vars: history
@@ -326,4 +329,4 @@ switch ($checkform) {
         break;
 }
 echo $output;
-?>
+?>

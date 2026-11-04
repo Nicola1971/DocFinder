@@ -6,7 +6,7 @@
         Ajax powered search and replace for the manager.
 
   Version:
-        1.7
+        1.8
 
   Created by:
 	    Bogdan Günther (http://www.medianotions.de - bg@medianotions.de)
@@ -39,7 +39,7 @@
 
 	2. Open the Modules > Manage Modules in the manager.
 
-	3. Create a new module called Doc Finder 1.7.
+	3. Create a new module called Doc Finder 1.8.
 
 	4. Insert 
 		
@@ -65,6 +65,18 @@
 ---------------------------------------------------------------
 :: Changelog:
 ---------------------------------------------------------------
+
+	04-Nov-26 (1.8)
+	- PHP 8.x compatibility (tested on PHP 8.3, still PHP 7 compatible)
+	- Fix: "older version of the PHx plugin" error on PHP 8 (old-style
+	  PHP 4 constructor in the bundled PHx parser was never executed)
+	- Bundled PHx parser renamed to DocFinderPHxParser (no collision
+	  with other PHxParser classes)
+	- Fix: TV matches in unpublished documents were dropped
+	- Fix: replace ignored the "case sensitive" option
+	- Fix: JS error after a replace (literal $counter in the script)
+	- Removed hardcoded Europe/Berlin timezone
+	- No more Undefined variable/array key/property warnings
 
 	05-June-16 (1.7)
 		-- Translateable
