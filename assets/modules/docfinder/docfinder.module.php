@@ -48,7 +48,7 @@ if ($df_manager_language != '' && file_exists(DF_BASE_PATH . 'lang/' . $df_manag
 // the module now uses the same timezone as the rest of the manager)
 
 $options = array();
-$options['moduleversion'] = '1.7';
+$options['moduleversion'] = '1.8';
 $options['theme'] = isset($modx->config['manager_theme']) ? $modx->config['manager_theme'] : '';
 $options['modx_charset'] = isset($modx->config['modx_charset']) ? $modx->config['modx_charset'] : 'UTF-8';
 $options['dir'] = (isset($modx->config['manager_direction']) && $modx->config['manager_direction'] == 'rtl' ? 'rtl' : 'ltr');
@@ -329,4 +329,4 @@ switch ($checkform) {
         break;
 }
 echo $output;
-?>
+?>
