@@ -6,17 +6,17 @@
         Ajax powered search and replace for the manager.
 
   Version:
-        1.8
+        1.8.2
 
   Created by:
 	    Bogdan Günther (http://www.medianotions.de - bg@medianotions.de)
 
-
+  Updated by: Nicola1971 https://github.com/Nicola1971/
 ----------------------------------------------------------------
 :: Description
 ----------------------------------------------------------------
 
-	At some point big MODx sites are difficult to handle with 
+	At some point big EVO sites are difficult to handle with 
 	the document tree in the manager. Or you just want to check 
 	all the documents of your site containing a specific text?
 
@@ -31,42 +31,26 @@
   GNU General Public License (GPL - http://www.gnu.org/copyleft/gpl.html)
 
 
------------------------------------------------------------------
-:: Installation:
------------------------------------------------------------------
-
-	1. Copy the folder docfinder to /assets/modules/.
-
-	2. Open the Modules > Manage Modules in the manager.
-
-	3. Create a new module called Doc Finder 1.8.
-
-	4. Insert 
-		
-			include(MODX_BASE_PATH . 'assets/modules/docfinder/docfinder.module.php');
-		
-		as module code.
-
-	5. Save the new Doc Finder module.
-
-	6. Reload the manager to make Doc Finder appear in the modules section.
-
-
-----------------------------------------------------------------
-:: Live demo:
-----------------------------------------------------------------
-
-	Try the life demo at trymodx.com:
-
-	URL:   http://docfinder.trymodx.com/manager/
-	Login: demo_user / demo_user
- 
 
 ---------------------------------------------------------------
 :: Changelog:
 ---------------------------------------------------------------
 
-	04-Nov-26 (1.8)
+	18-Nov-26 (1.8.2) by Nicola1971
+	- Help icons and tooltips as in the Evolution 1.4 manager
+	  (data-tooltip, js/tooltips.js); fixed broken icons in the results
+	- All interface texts in the language files, JavaScript included
+	  (alerts, confirm, labels) and date picker (months, week days,
+	  week starting on Monday); complete Italian translation
+	- Replace: "AND", "OR", "NOT" inside words (e.g. NOTIZIE) no longer
+	  block the replace
+	- Date picker: PHP 8 fixes, years up to 2049, layout fixed inside
+	  the Bootstrap based manager theme
+
+	04-Nov-26 (1.8.1) by Nicola1971
+	- Version number in the module header
+
+	04-Nov-26 (1.8) by Nicola1971
 	- PHP 8.x compatibility (tested on PHP 8.3, still PHP 7 compatible)
 	- Fix: "older version of the PHx plugin" error on PHP 8 (old-style
 	  PHP 4 constructor in the bundled PHx parser was never executed)
@@ -85,7 +69,7 @@
 		-- MODX Evolution package format
 
 	08-April-10 (1.6)
-		-- Updated appearance for MODx Evolution
+		-- Updated appearance for Evolution
 		-- Updated and bugfixed calendar funtions. (Contribution by goldsky) 
 
 	22-January-09 (1.5.2)
