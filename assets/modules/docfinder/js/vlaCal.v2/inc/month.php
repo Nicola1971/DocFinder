@@ -1,18 +1,18 @@
 <?php
-	include('vars.php');
+	include_once('vars.php');
 	
-	$start_monday	= $_POST['startMonday'] ? true : false;
-	$picker			= $_POST['picker'] ? true : false;	
+	$start_monday	= vlaCalPost('startMonday') == '1';
+	$picker			= vlaCalPost('picker') == '1';
 	
-	if(isset($_POST['pickedDate']) && $_POST['pickedDate'] != 'null') {
-		$pickedDateAr = explode('/', $_POST['pickedDate']);
-		$pickedDate	  = @mktime(1, 1, 1, $pickedDateAr[1], $pickedDateAr[0], $pickedDateAr[2]);
+	$pickedDateAr = explode('/', vlaCalPost('pickedDate'));
+	if(count($pickedDateAr) == 3 && is_numeric($pickedDateAr[0]) && is_numeric($pickedDateAr[1]) && is_numeric($pickedDateAr[2])) {
+		$pickedDate	  = mktime(1, 1, 1, (int)$pickedDateAr[1], (int)$pickedDateAr[0], (int)$pickedDateAr[2]);
 	} else {
 		$pickedDate   = mktime(1, 1, 1, date('n'), date('j'), date('Y'));
 	}
 	
-	if(isset($_POST['gotoPickedDate'])) $ts = isset($_POST['ts']) ? $_POST['ts'] : mktime(1, 1, 1, date('n', $pickedDate), 1, date('Y', $pickedDate));
-	else $ts = isset($_POST['ts']) ? $_POST['ts'] : mktime(1, 1, 1, date('n'), 1, date('Y'));
+	if(isset($_POST['gotoPickedDate'])) $ts = vlaCalInt('ts', mktime(1, 1, 1, date('n', $pickedDate), 1, date('Y', $pickedDate)));
+	else $ts = vlaCalInt('ts', mktime(1, 1, 1, date('n'), 1, date('Y')));
 	
 	$ts_year_full	= date('Y', $ts);
 	$ts_year		= date('Y', $ts);
@@ -26,8 +26,8 @@
 	$wdays_counter 	= date('w', $ts) - ($start_monday ? 1 : 0);
 	if($wdays_counter == -1) $wdays_counter = 6;
 ?>
-<table class="month<?php echo ($picker ? ' picker' : ''); ?>" cellpadding="0" summary="{'ts': '<?php echo $ts; ?>', 'pr_ts': '<?php echo $pr_ts; ?>', 'nx_ts': '<?php echo $nx_ts; ?>', 'label': '<?php echo $ts_month.', '.$ts_year_full; ?>', 
-	'current': 'month', 'parent': 'year'<?php echo ($ts_year == 1979 && date('n', $ts) == 1 ? ", 'hide_left_arrow': '1'" : '').($ts_year == 2030 && date('n', $ts) == 12 ? ", 'hide_right_arrow': '1'" : ''); ?>}">
+<table class="month<?php echo ($picker ? ' picker' : ''); ?>" cellpadding="0" summary="{'ts': '<?php echo $ts; ?>', 'pr_ts': '<?php echo $pr_ts; ?>', 'nx_ts': '<?php echo $nx_ts; ?>', 'label': '<?php echo vlaCalAttr($ts_month.' '.$ts_year_full); ?>', 
+	'current': 'month', 'parent': 'year'<?php echo ($ts_year <= $vlaCalFirstYear && date('n', $ts) == 1 ? ", 'hide_left_arrow': '1'" : '').($ts_year >= $vlaCalLastYear && date('n', $ts) == 12 ? ", 'hide_right_arrow': '1'" : ''); ?>}">
 	<tr>
 		<?php if(!$start_monday) echo '<th>'.$wdays_labels[6]."</th>\n"; ?>
 		<th><?php echo $wdays_labels[0]; ?></th>
@@ -87,4 +87,4 @@
 	}	
 
 ?></tr>
-</table>
+</table>

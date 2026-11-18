@@ -1,4 +1,7 @@
-<div class="vlaCalendar<?php ($_POST['style'] ? ' '.$_POST['style'] : '')?>">
+<?php
+	$vlaCalStyle = isset($_POST['style']) ? preg_replace('/[^a-zA-Z0-9_\- ]/', '', (string)$_POST['style']) : '';
+?>
+<div class="vlaCalendar<?php echo ($vlaCalStyle != '' ? ' ' . $vlaCalStyle : ''); ?>">
 	<span class="indication">
 		<div class="arrowRight"></div>
 		<div class="arrowLeft"></div>

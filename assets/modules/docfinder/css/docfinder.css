@@ -148,6 +148,20 @@ form#docfinder img.help {
     cursor: help;
 }
 
+/* help icons: Font Awesome class from $_style['icons_tooltip'], text in data-tooltip */
+form#docfinder i.help {
+    margin-left: 4px;
+    margin-right: 5px;
+    font-size: 1rem;
+    vertical-align: middle;
+    cursor: help;
+}
+
+/* type icons in the results: Font Awesome HTML from $_style['tree_*'] */
+#results_container td.type i.fa {
+    font-size: 1rem;
+}
+
 /* @end */
 
 /* @end */
@@ -472,6 +486,39 @@ div#ajax_load_indicator a img {
     float: left;
     margin-top: 1px;
     margin-right: 5px;
+}
+
+/* @end */
+/* @group Date picker (vlaCal) inside the Evolution 1.4 manager theme */
+
+/* the manager theme loads Bootstrap 4: box-sizing border-box and the .container
+   class (padding, max-width) shrink and shift the calendar, so reset them here */
+.vlaCalendarPicker,
+.vlaCalendarPicker * {
+    box-sizing: content-box;
+}
+
+.vlaCalendarPicker .vlaCalendar .container {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+}
+
+.vlaCalendarPicker .vlaCalendar table th,
+.vlaCalendarPicker .vlaCalendar table td {
+    padding-left: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    vertical-align: middle;
+    line-height: 14px;
+}
+
+.vlaCalendarPicker .vlaCalendar .month th {
+    padding-bottom: 1px;
+}
+
+.vlaCalendarPicker .vlaCalendar .month td {
+    padding-right: 3px;
 }
 
 /* @end */

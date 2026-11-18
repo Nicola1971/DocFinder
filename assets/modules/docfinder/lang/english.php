@@ -92,3 +92,20 @@ $_lang['form_replace_with'] = '<span id="replace_info">replaced by &ldquo;<stron
 $_lang['form_time'] = '<span id="time_info">(<span id="time">&ndash;</span> seconds)</span>';
 $_lang['cancel_search'] = 'Cancel search';
 $_lang['number_of_entries'] = 'Number of entries';
+
+// interface texts used by the JavaScript (js/functions.js) and the AJAX results
+$_lang['results_none'] = 'No';
+$_lang['search_canceled'] = 'Search canceled.';
+$_lang['label_string_search'] = 'Search for';
+$_lang['label_regexp_search'] = 'RegExp search';
+$_lang['replace_no_regexp'] = 'The replace function can not be combined with regular expressions.';
+$_lang['replace_no_operators'] = 'The replace function can not be combined with logical operators (AND, OR, NOT).';
+$_lang['replace_no_all'] = 'The replace function can not be combined with the ALL operator.';
+$_lang['replace_confirm'] = 'Replace all instances of “{search}” with “{replace}”?';
+$_lang['search_button_hint'] = 'Click or press ENTER to start the search.';
+
+// date picker (js/vlaCal.v2/inc/vars.php): comma separated lists
+$_lang['cal_months'] = 'January,February,March,April,May,June,July,August,September,October,November,December';
+$_lang['cal_months_short'] = 'Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec';
+$_lang['cal_weekdays'] = 'Mo,Tu,We,Th,Fr,Sa,Su'; // from Monday to Sunday
+$_lang['cal_start_monday'] = '0'; // 1 = weeks start on Monday

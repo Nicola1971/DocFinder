@@ -7,6 +7,7 @@ var vlaCalendar = new Class({
 	'leadingZero': true,
 	'twoDigitYear': false,
 	'filePath': 'inc/',
+	'lang': '',
 	
 	'style': '',
 	
@@ -81,7 +82,7 @@ var vlaCalendar = new Class({
 					  { method: 'post',
 						update: _id ? _id : this.tempLoader,
 						data: _pars + '&picker=' + (this.picker ? 1 : 0) + '&startMonday=' + (this.startMonday ? 1 : 0) + '&leadingZero=' + (this.leadingZero ? 1 : 0)
-							   + '&twoDigitYear=' + (this.twoDigitYear ? 1 : 0) + '&style=' +  this.style,
+							   + '&twoDigitYear=' + (this.twoDigitYear ? 1 : 0) + '&style=' + encodeURIComponent(this.style) + '&lang=' + encodeURIComponent(this.lang),
 						onComplete: function() { _onComplete(); _class.loading = false; },
 						evalScripts: true } ).request();
 		}

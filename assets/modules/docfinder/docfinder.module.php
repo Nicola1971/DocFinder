@@ -7,7 +7,7 @@
 //         Ajax powered search and replace for the manager.
 //
 //   Version:
-//         1.8 (PHP 8)
+//         1.8.2
 //
 //   Created by:
 // 	    Bogdan Günther (http://www.medianotions.de - bg@medianotions.de)
@@ -48,12 +48,22 @@ if ($df_manager_language != '' && file_exists(DF_BASE_PATH . 'lang/' . $df_manag
 // the module now uses the same timezone as the rest of the manager)
 
 $options = array();
-$options['moduleversion'] = '1.8';
+$options['moduleversion'] = '1.8.2';
 $options['theme'] = isset($modx->config['manager_theme']) ? $modx->config['manager_theme'] : '';
 $options['modx_charset'] = isset($modx->config['modx_charset']) ? $modx->config['modx_charset'] : 'UTF-8';
 $options['dir'] = (isset($modx->config['manager_direction']) && $modx->config['manager_direction'] == 'rtl' ? 'rtl' : 'ltr');
 $options['module_id'] = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $options['module_url'] = DF_PATH;
+
+// language code for the <html lang> attribute (set by the manager, e.g. "it")
+$options['lang'] = (isset($GLOBALS['modx_lang_attribute']) && preg_match('/^[a-zA-Z\-]{2,10}$/', $GLOBALS['modx_lang_attribute'])) ? $GLOBALS['modx_lang_attribute'] : 'en';
+
+// texts for js/functions.js and the date picker, written in the page as a JSON object (df_lang)
+$df_js_lang = array('cal_lang' => ($df_manager_language != '' && file_exists(DF_BASE_PATH . 'lang/' . $df_manager_language . '.php')) ? $df_manager_language : 'english');
+foreach (array('results_none', 'search_canceled', 'label_string_search', 'label_regexp_search', 'replace_no_regexp', 'replace_no_operators', 'replace_no_all', 'replace_confirm', 'cal_start_monday') as $df_key) {
+    $df_js_lang[$df_key] = isset($_lang[$df_key]) ? (string)$_lang[$df_key] : '';
+}
+$options['js_lang'] = json_encode($df_js_lang, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 
 
 
@@ -329,4 +339,4 @@ switch ($checkform) {
         break;
 }
 echo $output;
-?>
+?>

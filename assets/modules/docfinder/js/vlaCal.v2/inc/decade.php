@@ -1,14 +1,13 @@
 <?php
-	include("vars.php");
+	include_once("vars.php");
 	
-	$decadeAr	= array( array(1979, 1990),
-						 array(1989, 2000),
-						 array(1999, 2010),
-						 array(2009, 2020),
-						 array(2019, 2030) );
+	// decades from $vlaCalFirstYear to $vlaCalLastYear (each row: first and last year shown, outside years included)
+	$decadeAr	= array();
+	for($dy = $vlaCalFirstYear; $dy + 11 <= $vlaCalLastYear + 1; $dy += 10) $decadeAr[] = array($dy, $dy + 11);
 
-	$ts 		= $_POST["ts"];
+	$ts 		= vlaCalInt("ts", time());
 	$ts_year	= date("Y", $ts);
+	$decade		= $decadeAr[sizeof($decadeAr)-1];
 	
 	foreach($decadeAr as $d) {
 		if($ts_year == $decadeAr[sizeof($decadeAr)-1][1] || $ts_year > $d[0] && $ts_year < $d[1] || $ts_year == $decadeAr[0][0]) {
@@ -17,8 +16,8 @@
 		}
 	}
 	
-	$y_ts		= $_POST["parent"] == "year" ? mktime(1, 1, 1, 1, 1, date("Y", $ts)) : ""; //Selected year timestamp
-	$m_ts		= $_POST["m_ts"];
+	$y_ts		= vlaCalPost("parent") == "year" ? mktime(1, 1, 1, 1, 1, date("Y", $ts)) : ""; //Selected year timestamp
+	$m_ts		= vlaCalInt("m_ts", "");
 	
 	$c_ts 		= mktime(1, 1, 1, 1, 1, date("Y"));	//Timestamp current year
 		
@@ -48,4 +47,4 @@
 		echo "</tr>\n";
 	}
 ?>
-</table>
+</table>

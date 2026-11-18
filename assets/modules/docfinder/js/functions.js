@@ -6,7 +6,7 @@
 //         Ajax powered search and replace for the manager.
 // 
 //   Version:
-//         1.6.1
+//         1.8
 // 
 //   Created by:
 // 	    Bogdan Günther (http://www.medianotions.de - bg@medianotions.de)
@@ -35,6 +35,8 @@ window.addEvent('load', function () {
         style: 'apple_widget',
         offset: { x: 3, y: -1 },
         separator: '-',
+        startMonday: (df_lang.cal_start_monday == '1'),
+        lang: df_lang.cal_lang,
         filePath: module_url + 'js/vlaCal.v2/inc/'
     });
 
@@ -42,6 +44,8 @@ window.addEvent('load', function () {
         style: 'apple_widget',
         offset: { x: 3, y: -1 },
         separator: '-',
+        startMonday: (df_lang.cal_start_monday == '1'),
+        lang: df_lang.cal_lang,
         filePath: module_url + 'js/vlaCal.v2/inc/'
     });
 
@@ -49,6 +53,8 @@ window.addEvent('load', function () {
         style: 'apple_widget',
         offset: { x: 3, y: -1 },
         separator: '-',
+        startMonday: (df_lang.cal_start_monday == '1'),
+        lang: df_lang.cal_lang,
         filePath: module_url + 'js/vlaCal.v2/inc/'
     });
 
@@ -56,6 +62,8 @@ window.addEvent('load', function () {
         style: 'apple_widget',
         offset: { x: 3, y: -1 },
         separator: '-',
+        startMonday: (df_lang.cal_start_monday == '1'),
+        lang: df_lang.cal_lang,
         filePath: module_url + 'js/vlaCal.v2/inc/'
     });
 
@@ -98,7 +106,7 @@ window.addEvent('load', function () {
         $('ajax_load_indicator').setStyles('display: none;');
 
         // set text to results container and show it
-        $('results_container').setText('Search canceled.');
+        $('results_container').setText(df_lang.search_canceled);
         $('results_container').setStyles('display: inline;');
 
         // stop timer
@@ -111,8 +119,8 @@ window.addEvent('load', function () {
 
     // toggle search field text
     function toggleRegExpSearch() {
-        if ($('regular_expression').getValue() == false) $('search_field_text').setText('String search:');
-        else $('search_field_text').setText('RegExp search:');
+        if ($('regular_expression').getValue() == false) $('search_field_text').setText(df_lang.label_string_search + ':');
+        else $('search_field_text').setText(df_lang.label_regexp_search + ':');
     }
 
     // catch event for regular_expression
@@ -134,13 +142,14 @@ var startAjaxSearch = function () {
     // check if this a replace
     if ($('replace_mode').value == 1) {
         // abort if regular expressions are on
-        if ($('regular_expression').getValue() == "on") var infoText = "The replace function can not be combinded with regular expressions.";
+        var infoText = '';
+        if ($('regular_expression').getValue() == "on") infoText = df_lang.replace_no_regexp;
 
-        // abort if logical operators are used
-        if ($('searchstring').value.test("AND") || $('searchstring').value.test("OR") || $('searchstring').value.test("NOT")) var infoText = "The replace function can not be combined with logic operators.";
+        // abort if logical operators are used (same rule as getSqlWhere(): " AND ", " OR ", " NOT " with spaces)
+        if (/\s(AND|OR|NOT)\s/.test($('searchstring').value)) infoText = df_lang.replace_no_operators;
 
         // abort if the ALL operator is used
-        if ($('searchstring').value == "ALL") var infoText = "The replace function can not be combined with the ALL operator.";
+        if ($('searchstring').value == "ALL") infoText = df_lang.replace_no_all;
 
         // alert abort info, reset replace mode var and cancel function
         if (infoText) {
@@ -150,7 +159,7 @@ var startAjaxSearch = function () {
         }
 
         // Ask user for confirmation
-        confirmation = confirm("Replace all instances of “" + $('searchstring').value + "” with “" + $('replacestring').value + "”?");
+        var confirmation = confirm(df_lang.replace_confirm.split('{search}').join($('searchstring').value).split('{replace}').join($('replacestring').value));
         if (confirmation == false) {
             $('replace_mode').value = 0;
             return;

@@ -1,9 +1,9 @@
 <?php
-	include("vars.php");
+	include_once("vars.php");
 	
-	$ts 		= $_POST["ts"];
+	$ts 		= vlaCalInt("ts", time());
 	
-	$m_ts		= $_POST["parent"] == "month" ? mktime(1, 1, 1, date("n", $ts), 1, date("Y", $ts)) : ""; //Selected month timestamp
+	$m_ts		= vlaCalPost("parent") == "month" ? mktime(1, 1, 1, date("n", $ts), 1, date("Y", $ts)) : ""; //Selected month timestamp
 	
 	$c_ts 		= mktime(1, 1, 1, date("n"), 1, date("Y"));	//Timestamp current month
 	
@@ -12,7 +12,7 @@
 	$pr_ts		= mktime(1, 1, 1, 1, 1, $ts_year-1);
 	$nx_ts		= mktime(1, 1, 1, 1, 1, $ts_year+1);
 ?>
-<table class="year" cellpadding="0" summary="{'ts': '<?php echo $ts?>', 'pr_ts': '<?php echo $pr_ts?>', 'nx_ts': '<?php echo $nx_ts;?>', 'label': '<?php echo $ts_year?>', 'current': 'year', 'parent': 'decade'<?php echo ($ts_year == 1979 ? ", 'hide_left_arrow': '1'" : '').($ts_year == 2030 ? ", 'hide_right_arrow': '1'" : '')?>}">
+<table class="year" cellpadding="0" summary="{'ts': '<?php echo $ts?>', 'pr_ts': '<?php echo $pr_ts?>', 'nx_ts': '<?php echo $nx_ts;?>', 'label': '<?php echo $ts_year?>', 'current': 'year', 'parent': 'decade'<?php echo ($ts_year <= $vlaCalFirstYear ? ", 'hide_left_arrow': '1'" : '').($ts_year >= $vlaCalLastYear ? ", 'hide_right_arrow': '1'" : '')?>}">
 <?php
 	//Add months
 	$m = 1;
@@ -27,4 +27,4 @@
 		//onclick=\"$name.u('inc/month', 'ts=$i_ts', '$name.fade()');\"
 	}
 ?>
-</table>
+</table>
