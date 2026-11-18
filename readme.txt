@@ -66,7 +66,7 @@
 		-- Translateable
 
 	05-March-14 (1.6.1)
-		-- MODX Evolution package format
+		-- Evolution package format
 
 	08-April-10 (1.6)
 		-- Updated appearance for Evolution
